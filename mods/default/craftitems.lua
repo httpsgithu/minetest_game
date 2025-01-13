@@ -57,7 +57,7 @@ local function book_on_use(itemstack, user)
 	local page, page_max, lines, string = 1, 1, {}, ""
 
 	-- Backwards compatibility
-	local old_data = minetest.deserialize(itemstack:get_metadata())
+	local old_data = minetest.deserialize(itemstack:get_meta():get_string(""))
 	if old_data then
 		meta:from_table({ fields = old_data })
 	end
@@ -141,6 +141,8 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			string = formspec_string(lpp, data.page, lines, string)
 			contents = formspec_read(player_name, title, string,
 				text, data.page, data.page_max)
+		else
+			return -- malicious data
 		end
 		tab_number = tab
 		local formspec = formspec_size .. formspec_core(tab) .. contents
@@ -148,7 +150,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		return
 	end
 
-	if fields.close then
+	if fields.quit then
 		book_writers[player_name] = nil
 	end
 
@@ -179,6 +181,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		data.description = S("\"@1\" by @2", short_title, data.owner)
 		data.text = fields.text:sub(1, max_text_size)
 		data.text = data.text:gsub("\r\n", "\n"):gsub("\r", "\n")
+		data.text = data.text:gsub("[%z\1-\8\11-\31\127]", "") -- strip naughty control characters (keeps \t and \n)
 		data.page = 1
 		data.page_max = math.ceil((#data.text:gsub("[^\n]", "") + 1) / lpp)
 
